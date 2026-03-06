@@ -13,6 +13,8 @@ export function useAgoraAgent() {
   const [elapsed, setElapsed] = useState(0);
   const [audioData, setAudioData] = useState<Uint8Array | null>(null);
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicId] = useState<string>("");
 
   const clientRef = useRef<any>(null);
   const rtmClientRef = useRef<any>(null);
@@ -45,6 +47,23 @@ export function useAgoraAgent() {
     return () => { if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current); };
   }, [isConnected]);
 
+  // ---- Device enumeration ----
+  const refreshDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const mics = devices.filter((d) => d.kind === "audioinput");
+      setMicDevices(mics);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    refreshDevices();
+    navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
+    return () => {
+      navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
+    };
+  }, [refreshDevices]);
+
   // ---- Audio visualizer ----
   const startViz = useCallback((track: any) => {
     try {
@@ -73,6 +92,19 @@ export function useAgoraAgent() {
     analyserRef.current = null;
     setAudioData(null);
   }, []);
+
+  const switchMicDevice = useCallback(async (deviceId: string) => {
+    const track = audioTrackRef.current;
+    if (!track) return;
+    try {
+      await track.setDevice(deviceId);
+      setSelectedMicId(deviceId);
+      stopViz();
+      startViz(track);
+    } catch (err) {
+      console.error("Failed to switch mic device:", err);
+    }
+  }, [startViz, stopViz]);
 
   // ---- Transcript parsing (RTC stream-message) ----
   const handleTranscript = useCallback((msg: any) => {
@@ -264,6 +296,9 @@ export function useAgoraAgent() {
     error,
     elapsed,
     audioData,
+    micDevices,
+    selectedMicId,
+    switchMicDevice,
     handleConnect,
     handleDisconnect,
     handleToggleMute,

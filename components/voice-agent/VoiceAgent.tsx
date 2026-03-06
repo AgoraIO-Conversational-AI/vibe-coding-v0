@@ -17,15 +17,15 @@ export function VoiceAgent() {
   const { theme, toggle: toggleTheme } = useTheme();
   const {
     envStatus, agentState, isConnected, isMuted, messages,
-    error, elapsed, audioData,
+    error, elapsed, audioData, micDevices, selectedMicId, switchMicDevice,
     handleConnect, handleDisconnect, handleToggleMute, handleSend,
   } = useAgoraAgent();
 
   const [chatInput, setChatInput] = useState("");
   const [prompt, setPrompt] = useState(
-    "You are a friendly, concise voice assistant. Keep responses under 20 words. Be warm and helpful."
+    "You are a friendly voice assistant. Keep responses concise, around 10 to 20 words. Be helpful and conversational."
   );
-  const [greeting, setGreeting] = useState("Hi! How can I help you today?");
+  const [greeting, setGreeting] = useState("Hi there! How can I help you today?");
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +91,10 @@ export function VoiceAgent() {
           onPromptChange={setPrompt}
           onGreetingChange={setGreeting}
           onClose={() => setShowSettings(false)}
+          isConnected={isConnected}
+          micDevices={micDevices}
+          selectedMicId={selectedMicId}
+          onMicDeviceChange={switchMicDevice}
         />
       )}
 
@@ -128,8 +132,7 @@ export function VoiceAgent() {
           </button>
           <button
             onClick={() => setShowSettings(true)}
-            disabled={isConnected}
-            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Settings"
           >
             <Settings className="w-4 h-4" />
@@ -137,10 +140,49 @@ export function VoiceAgent() {
         </div>
       </header>
 
+      {/* Mobile: compact status bar (only when connected) */}
+      {isConnected && (
+        <div className="flex md:hidden items-center justify-center gap-3 px-4 py-2 border-b border-border">
+          <span className={cn(
+            "w-2 h-2 rounded-full",
+            agentState === "talking" ? "bg-emerald-400 animate-pulse" : "bg-primary"
+          )} />
+          <span className="text-sm font-medium text-foreground">
+            {agentState === "talking" ? "Agent Speaking" : agentState === "listening" ? "Listening" : agentState}
+          </span>
+        </div>
+      )}
+
+      {/* Mobile: pre-connection view (only when not connected, since left panel is hidden) */}
+      {!isConnected && (
+        <div className="flex md:hidden flex-col items-center justify-center gap-6 flex-1 p-6">
+          <div className="mb-4">
+            <AgentOrb state={agentState} />
+          </div>
+          {error && (
+            <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2 w-full max-w-xs">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="leading-tight">{error}</span>
+            </div>
+          )}
+          <button
+            onClick={onConnect}
+            disabled={agentState === "joining"}
+            className="h-11 px-6 rounded-lg font-medium text-sm flex items-center justify-center gap-2 bg-primary text-primary-foreground transition-all duration-300 hover:opacity-90 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {agentState === "joining" ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Connecting...</>
+            ) : (
+              <><Phone className="w-4 h-4" /> Start Call</>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Body */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left panel — Orb + controls */}
-        <div className="flex flex-col items-center justify-between py-10 px-6 w-64 flex-shrink-0 border-r border-border">
+      <div className={cn("flex-1 flex overflow-hidden flex-col md:flex-row", !isConnected && "hidden md:flex")}>
+        {/* Left panel — Orb + controls (desktop only) */}
+        <div className="hidden md:flex flex-col items-center justify-between py-10 px-6 w-64 flex-shrink-0 border-r border-border">
           <div className="flex flex-col items-center gap-10">
             <AgentOrb state={agentState} />
             {isConnected && (
@@ -205,6 +247,31 @@ export function VoiceAgent() {
           messagesEndRef={messagesEndRef}
         />
       </div>
+
+      {/* Mobile: bottom controls bar (only when connected) */}
+      {isConnected && (
+        <div className="flex md:hidden items-center justify-center gap-3 p-3 border-t border-border flex-shrink-0">
+          <button
+            onClick={handleToggleMute}
+            aria-label={isMuted ? "Unmute" : "Mute"}
+            className={cn(
+              "w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200",
+              isMuted
+                ? "bg-muted text-destructive"
+                : "bg-primary text-primary-foreground"
+            )}
+          >
+            {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={handleDisconnect}
+            className="h-11 px-6 rounded-lg font-medium text-sm flex items-center justify-center gap-2 bg-destructive text-white transition-all duration-300 hover:bg-destructive/90"
+          >
+            <PhoneOff className="w-4 h-4" />
+            End Call
+          </button>
+        </div>
+      )}
     </div>
   );
 }
