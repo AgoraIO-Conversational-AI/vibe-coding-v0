@@ -48,7 +48,7 @@ export function VoiceAgent() {
   // ---- Render: loading ----
   if (envStatus === null) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-dvh items-center justify-center bg-background">
         <Loader2 className="w-5 h-5 animate-spin text-primary" />
       </div>
     );
@@ -57,7 +57,7 @@ export function VoiceAgent() {
   // ---- Render: missing env vars ----
   if (!envStatus.ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background p-6">
+      <div className="flex h-dvh items-center justify-center bg-background p-6">
         <div className="max-w-sm w-full bg-card border border-border rounded-xl p-8 space-y-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center flex-shrink-0">
@@ -83,7 +83,7 @@ export function VoiceAgent() {
 
   // ---- Render: main UI ----
   return (
-    <div className="relative flex flex-col h-screen bg-background overflow-hidden font-sans">
+    <div className="relative flex flex-col h-dvh bg-background overflow-hidden font-sans">
       {showSettings && (
         <SettingsPanel
           prompt={prompt}
